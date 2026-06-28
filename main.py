@@ -250,6 +250,15 @@ def fill_excel(req: FillRequest):
             if k not in FV_IND:
                 FV_IND[k] = row['value']
 
+    # 6b. Build LATEST_IND index (fallback for per-industry when no forecast exists)
+    LATEST_IND = {}
+    for row in measured_rows:
+        if row['industry'] and row['industry'] not in ('All', ''):
+            k = f"{row['indicator_key']}|{row['country_code']}|{row['industry']}|{norm_sub(row['sub_row'])}"
+            existing = LATEST_IND.get(k)
+            if existing is None or row['year'] > existing[0]:
+                LATEST_IND[k] = (row['year'], row['value'])
+
     FORECAST_KEYS = set(r['indicator_key'] for r in forecast_rows)
 
     # 7. Fetch demand data from Supabase
@@ -329,6 +338,9 @@ def fill_excel(req: FillRequest):
                         col_ind26 = get_column_letter(oil_start + (i * 4) + 2)
                         col_ind27 = get_column_letter(oil_start + (i * 4) + 3)
                         v26 = FV_IND.get(f"{current_key}|{cc}|{excel_ind}|Overall|{target_year}")
+                        if v26 is None:
+                            li = LATEST_IND.get(f"{current_key}|{cc}|{excel_ind}|Overall")
+                            if li: v26 = li[1]
                         v27 = FV_IND.get(f"{current_key}|{cc}|{excel_ind}|Overall|{target_year + 1}")
                         if v26 is not None:
                             if write_val(ws, row, col_ind26, v26): written += 1
@@ -378,6 +390,9 @@ def fill_excel(req: FillRequest):
                 col_ind26 = get_column_letter(oil_start + (i * 4) + 2)
                 col_ind27 = get_column_letter(oil_start + (i * 4) + 3)
                 v26 = FV_IND.get(f"{current_key}|{cc}|{excel_ind}|{sub_norm}|{target_year}")
+                if v26 is None:
+                    li = LATEST_IND.get(f"{current_key}|{cc}|{excel_ind}|{sub_norm}")
+                    if li: v26 = li[1]
                 v27 = FV_IND.get(f"{current_key}|{cc}|{excel_ind}|{sub_norm}|{target_year + 1}")
                 if v26 is not None:
                     if write_val(ws, row, col_ind26, v26): written += 1
