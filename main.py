@@ -327,7 +327,7 @@ def fill_excel(req: FillRequest):
                     val26 = FV.get(k26)
                     if val26 is None:
                         le = LATEST.get(f"{current_key}|{cc}|Overall")
-                        if le: val26 = le[1]
+                        if le and le[0] == target_year: val26 = le[1]  # no older-year carry-forward
                     k27 = f"{current_key}|{cc}|Overall|{target_year + 1}"
                     val27 = FV.get(k27)
                     if val26 is not None:
@@ -340,7 +340,7 @@ def fill_excel(req: FillRequest):
                         v26 = FV_IND.get(f"{current_key}|{cc}|{excel_ind}|Overall|{target_year}")
                         if v26 is None:
                             li = LATEST_IND.get(f"{current_key}|{cc}|{excel_ind}|Overall")
-                            if li: v26 = li[1]
+                            if li and li[0] == target_year: v26 = li[1]  # no older-year carry-forward
                         v27 = FV_IND.get(f"{current_key}|{cc}|{excel_ind}|Overall|{target_year + 1}")
                         if v26 is not None:
                             if write_val(ws, row, col_ind26, v26): written += 1
@@ -363,7 +363,7 @@ def fill_excel(req: FillRequest):
                     val26 = FV.get(k26)
                     if val26 is None:
                         le = LATEST.get(f"{current_key}|{cc}|Overall")
-                        if le: val26 = le[1]
+                        if le and le[0] == target_year: val26 = le[1]  # no older-year carry-forward
                     val27 = FV.get(f"{current_key}|{cc}|Overall|{target_year + 1}")
                     if val26 is not None:
                         if write_val(ws, row, col26, val26): written += 1
@@ -378,7 +378,7 @@ def fill_excel(req: FillRequest):
             val26 = FV.get(k26)
             if val26 is None:
                 le = LATEST.get(f"{current_key}|{cc}|{sub_norm}")
-                if le: val26 = le[1]
+                if le and le[0] == target_year: val26 = le[1]  # no older-year carry-forward
             val27 = FV.get(k27)
 
             if val26 is not None:
@@ -392,7 +392,7 @@ def fill_excel(req: FillRequest):
                 v26 = FV_IND.get(f"{current_key}|{cc}|{excel_ind}|{sub_norm}|{target_year}")
                 if v26 is None:
                     li = LATEST_IND.get(f"{current_key}|{cc}|{excel_ind}|{sub_norm}")
-                    if li: v26 = li[1]
+                    if li and li[0] == target_year: v26 = li[1]  # no older-year carry-forward
                 v27 = FV_IND.get(f"{current_key}|{cc}|{excel_ind}|{sub_norm}|{target_year + 1}")
                 if v26 is not None:
                     if write_val(ws, row, col_ind26, v26): written += 1
