@@ -261,22 +261,34 @@ def fill_excel(req: FillRequest):
 
     FORECAST_KEYS = set(r['indicator_key'] for r in forecast_rows)
 
-    # 7. Fetch demand data from Supabase
+    # 7. Fetch demand data (job-post headcount per LinkedIn industry) for the target year
     demand_rows = fetch_all(
         "indicator_values?indicator_key=eq.talent_mobility__industries_in_high_or_lower_demand"
-        "&select=country_code,sub_row,value"
+        f"&year=eq.{target_year}&select=country_code,sub_row,value"
     )
     CC_TO_SHEET = {'KW':'Kuwait','SA':'KSA','AE':'UAE','OM':'Oman','BH':'Bahrain','QA':'Qatar','GCC':'GCC'}
-    demand_by_country = {s: {} for s in LAYOUTS}
+    CC_NORM = {'KWT':'KW','KSA':'SA','BHR':'BH','OMN':'OM','QAT':'QA','UAE':'AE'}
+    # value is a 0..4 demand priority (from 02c); take the strongest per Excel industry
+    _prio = {s: {} for s in LAYOUTS}
     for row in demand_rows:
-        sheet = CC_TO_SHEET.get(row.get('country_code', ''))
+        cc = str(row.get('country_code', '')).strip()
+        cc = CC_NORM.get(cc, cc)
+        sheet = CC_TO_SHEET.get(cc)
         if not sheet: continue
-        excel_ind = INDUSTRY_MAP.get(row.get('sub_row', ''))
+        excel_ind = INDUSTRY_MAP.get(str(row.get('sub_row', '')).strip())
         if not excel_ind: continue
-        demand = row.get('value', '')
-        cur = demand_by_country[sheet].get(excel_ind, '')
-        if DEMAND_PRIORITY.get(str(demand), 0) > DEMAND_PRIORITY.get(cur, 0):
-            demand_by_country[sheet][excel_ind] = demand
+        try:
+            p = float(row.get('value'))
+        except (TypeError, ValueError):
+            continue
+        _prio[sheet][excel_ind] = max(_prio[sheet].get(excel_ind, 0), p)
+    # remap priority -> label: >=3 (High/Very high) = "High demand", 1-2 = "Lower demand", 0 = no data
+    demand_by_country = {s: {} for s in LAYOUTS}
+    for sheet, inds in _prio.items():
+        for ind, p in inds.items():
+            if p <= 0:
+                continue
+            demand_by_country[sheet][ind] = 'High demand' if p >= 3 else 'Lower demand'
 
     # 8. Open workbook and fill
     wb = load_workbook(io.BytesIO(excel_bytes))
@@ -327,7 +339,7 @@ def fill_excel(req: FillRequest):
                     val26 = FV.get(k26)
                     if val26 is None:
                         le = LATEST.get(f"{current_key}|{cc}|Overall")
-                        if le and le[0] == target_year: val26 = le[1]  # no older-year carry-forward
+                        if le and (le[0] == target_year or current_key not in FORECAST_KEYS): val26 = le[1]  # no older-year carry-forward
                     k27 = f"{current_key}|{cc}|Overall|{target_year + 1}"
                     val27 = FV.get(k27)
                     if val26 is not None:
@@ -340,7 +352,7 @@ def fill_excel(req: FillRequest):
                         v26 = FV_IND.get(f"{current_key}|{cc}|{excel_ind}|Overall|{target_year}")
                         if v26 is None:
                             li = LATEST_IND.get(f"{current_key}|{cc}|{excel_ind}|Overall")
-                            if li and li[0] == target_year: v26 = li[1]  # no older-year carry-forward
+                            if li and (li[0] == target_year or current_key not in FORECAST_KEYS): v26 = li[1]  # no older-year carry-forward
                         v27 = FV_IND.get(f"{current_key}|{cc}|{excel_ind}|Overall|{target_year + 1}")
                         if v26 is not None:
                             if write_val(ws, row, col_ind26, v26): written += 1
@@ -363,7 +375,7 @@ def fill_excel(req: FillRequest):
                     val26 = FV.get(k26)
                     if val26 is None:
                         le = LATEST.get(f"{current_key}|{cc}|Overall")
-                        if le and le[0] == target_year: val26 = le[1]  # no older-year carry-forward
+                        if le and (le[0] == target_year or current_key not in FORECAST_KEYS): val26 = le[1]  # no older-year carry-forward
                     val27 = FV.get(f"{current_key}|{cc}|Overall|{target_year + 1}")
                     if val26 is not None:
                         if write_val(ws, row, col26, val26): written += 1
@@ -378,7 +390,7 @@ def fill_excel(req: FillRequest):
             val26 = FV.get(k26)
             if val26 is None:
                 le = LATEST.get(f"{current_key}|{cc}|{sub_norm}")
-                if le and le[0] == target_year: val26 = le[1]  # no older-year carry-forward
+                if le and (le[0] == target_year or current_key not in FORECAST_KEYS): val26 = le[1]  # no older-year carry-forward
             val27 = FV.get(k27)
 
             if val26 is not None:
@@ -392,7 +404,7 @@ def fill_excel(req: FillRequest):
                 v26 = FV_IND.get(f"{current_key}|{cc}|{excel_ind}|{sub_norm}|{target_year}")
                 if v26 is None:
                     li = LATEST_IND.get(f"{current_key}|{cc}|{excel_ind}|{sub_norm}")
-                    if li and li[0] == target_year: v26 = li[1]  # no older-year carry-forward
+                    if li and (li[0] == target_year or current_key not in FORECAST_KEYS): v26 = li[1]  # no older-year carry-forward
                 v27 = FV_IND.get(f"{current_key}|{cc}|{excel_ind}|{sub_norm}|{target_year + 1}")
                 if v26 is not None:
                     if write_val(ws, row, col_ind26, v26): written += 1
