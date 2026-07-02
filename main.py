@@ -122,6 +122,16 @@ HEADER_ONLY_KEYS = {
     'rewards__organizations_providing_non_monetary_benefits',
     'talent_mobility__organizations_facing_skill_shortages',
     'talent_mobility__organizations_adopting_remote_work_policies',
+    # BOD / ESG / national — scalar values that live on the indicator header row
+    'bod__average_number_of_board_members',
+    'bod__average_bod_remuneration_per_board_member_in_usd_thousands',
+    'bod__average_net_profit_in_usd_thousands',
+    'bod__average_total_remuneration_in_usd_thousands',
+    'esg__sustainability_reporting',
+    'esg__average_hours_of_training_provided_to_employees',
+    'esg__female_representation_in_the_workforce',
+    'esg__female_representation_in_the_bod',
+    'talent_mobility__percentage_of_national_employees',
 }
 
 # ── Helpers ───────────────────────────────────────────────────────────────────
